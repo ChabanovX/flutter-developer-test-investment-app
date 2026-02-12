@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'bloc/stock_bloc.dart';
@@ -14,16 +14,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return CupertinoApp(
+      debugShowCheckedModeBanner: false,
       title: 'Stock Investment',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
+      theme: const CupertinoThemeData(
+        brightness: Brightness.light,
+        primaryColor: CupertinoColors.activeBlue,
       ),
       home: BlocProvider(
-        create: (_) => StockBloc(
-          StockRepository(),
-        ),
+        create: (_) => StockBloc(StockRepository()),
         child: const HomePage(),
       ),
     );
