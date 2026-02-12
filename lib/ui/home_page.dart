@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:stock_investment_app/ui/widgets/filter_button.dart';
 
 import '../bloc/stock_bloc.dart';
 import '../bloc/stock_event.dart';
@@ -19,6 +20,9 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   static const String _allCountriesToken = '__all__';
+  static const String _allComplianceToken = '__all_compliance__';
+  static const String _compliantToken = '__compliant__';
+  static const String _nonCompliantToken = '__non_compliant__';
 
   late final TextEditingController _searchController;
   late final ScrollController _scrollController;
@@ -53,89 +57,51 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  String _complianceSegmentValue(bool? compliance) {
+  String _complianceLabel(bool? compliance) {
     if (compliance == true) {
-      return 'compliant';
+      return 'Compliant';
     }
     if (compliance == false) {
-      return 'non_compliant';
+      return 'Non-compliant';
     }
-    return 'all';
+    return 'All';
   }
 
-  bool? _complianceFromSegment(String? value) {
+  bool? _complianceFromToken(String? value) {
     switch (value) {
-      case 'compliant':
+      case _compliantToken:
         return true;
-      case 'non_compliant':
+      case _nonCompliantToken:
         return false;
       default:
         return null;
     }
   }
 
-  Future<void> _showCountrySelector(StockState state) async {
-    final selectedValue = await showCupertinoModalPopup<String>(
-      context: context,
-      builder: (popupContext) {
-        return CupertinoActionSheet(
-          title: const Text('Select Country'),
-          actions: <CupertinoActionSheetAction>[
-            CupertinoActionSheetAction(
-              onPressed: () {
-                Navigator.of(popupContext).pop(_allCountriesToken);
-              },
-              child: const Text('All Countries'),
-            ),
-            ...state.supportedCountries.map(
-              (countryCode) => CupertinoActionSheetAction(
-                onPressed: () {
-                  Navigator.of(popupContext).pop(countryCode);
-                },
-                child: Text(countryCode),
-              ),
-            ),
-          ],
-          cancelButton: CupertinoActionSheetAction(
-            isDefaultAction: true,
-            onPressed: () {
-              Navigator.of(popupContext).pop();
-            },
-            child: const Text('Cancel'),
-          ),
-        );
-      },
-    );
-
-    if (!mounted || selectedValue == null) {
-      return;
-    }
-
-    final countryCode = selectedValue == _allCountriesToken
-        ? null
-        : selectedValue;
-    context.read<StockBloc>().add(StockCountryChanged(countryCode));
-  }
-
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
+        automaticallyImplyLeading: false,
         middle: BlocBuilder<StockBloc, StockState>(
           buildWhen: (previous, current) =>
               previous.totalCount != current.totalCount,
           builder: (context, state) {
-            return Text('Stock Investment (${state.totalCount})');
+            return const Text('Stock Investment');
           },
         ),
-        trailing: CupertinoButton(
-          padding: EdgeInsets.zero,
-          minimumSize: const Size(28, 28),
-          onPressed: () {
-            context.read<StockBloc>().add(const StockRefreshRequested());
-          },
-          child: const Icon(CupertinoIcons.refresh, size: 20),
-        ),
+        // leading: Container(
+        //   color: CupertinoColors.systemGrey4,
+        //   child: CupertinoButton(
+        //     padding: EdgeInsets.zero,
+        //     sizeStyle: CupertinoButtonSize.small,
+        //     child: const Icon(
+        //       CupertinoIcons.right_chevron,
+        //       color: CupertinoColors.black,
+        //     ),
+        //     onPressed: () {},
+        //   ),
+        // ),
       ),
       child: SafeArea(
         bottom: false,
@@ -166,81 +132,121 @@ class _HomePageState extends State<HomePage> {
                 builder: (context, state) {
                   final selectedCountry = state.countryCode ?? 'All Countries';
 
-                  return Column(
-                    children: <Widget>[
-                      CupertinoSlidingSegmentedControl<String>(
-                        groupValue: _complianceSegmentValue(state.compliance),
-                        children: const <String, Widget>{
-                          'all': Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 6,
-                            ),
-                            child: Text('All'),
-                          ),
-                          'compliant': Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 6,
-                            ),
-                            child: Text('Compliant'),
-                          ),
-                          'non_compliant': Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 6,
-                            ),
-                            child: Text('Non-compliant'),
-                          ),
-                        },
-                        onValueChanged: (value) {
-                          context.read<StockBloc>().add(
-                            StockComplianceChanged(
-                              _complianceFromSegment(value),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        child: CupertinoButton(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          color: CupertinoColors.secondarySystemFill,
-                          borderRadius: BorderRadius.circular(10),
-                          onPressed: () {
-                            _showCountrySelector(state);
-                          },
-                          child: Row(
-                            children: <Widget>[
-                              const Icon(
-                                CupertinoIcons.flag,
-                                size: 18,
-                                color: CupertinoColors.label,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  selectedCountry,
-                                  textAlign: TextAlign.start,
-                                  style: const TextStyle(
-                                    color: CupertinoColors.label,
+                  return SizedBox(
+                    height: 44,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      child: Row(
+                        children: <Widget>[
+                          FilterButton<String>(
+                            name:
+                                'Compliance: ${_complianceLabel(state.compliance)}',
+                            icon: CupertinoIcons.checkmark_seal,
+                            sheetBuilder: (popupContext) {
+                              return CupertinoActionSheet(
+                                title: const Text('Select Compliance'),
+                                actions: <CupertinoActionSheetAction>[
+                                  CupertinoActionSheetAction(
+                                    onPressed: () {
+                                      Navigator.of(
+                                        popupContext,
+                                      ).pop(_allComplianceToken);
+                                    },
+                                    child: const Text('All'),
                                   ),
+                                  CupertinoActionSheetAction(
+                                    onPressed: () {
+                                      Navigator.of(
+                                        popupContext,
+                                      ).pop(_compliantToken);
+                                    },
+                                    child: const Text('Compliant'),
+                                  ),
+                                  CupertinoActionSheetAction(
+                                    onPressed: () {
+                                      Navigator.of(
+                                        popupContext,
+                                      ).pop(_nonCompliantToken);
+                                    },
+                                    child: const Text('Non-compliant'),
+                                  ),
+                                ],
+                                cancelButton: CupertinoActionSheetAction(
+                                  isDefaultAction: true,
+                                  onPressed: () {
+                                    Navigator.of(popupContext).pop();
+                                  },
+                                  child: const Text('Cancel'),
                                 ),
-                              ),
-                              const Icon(
-                                CupertinoIcons.chevron_down,
-                                size: 16,
-                                color: CupertinoColors.systemGrey,
-                              ),
-                            ],
+                              );
+                            },
+                            onSelected: (selectedValue) {
+                              if (!mounted || selectedValue == null) {
+                                return;
+                              }
+
+                              context.read<StockBloc>().add(
+                                StockComplianceChanged(
+                                  _complianceFromToken(selectedValue),
+                                ),
+                              );
+                            },
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          FilterButton<String>(
+                            name: selectedCountry,
+                            icon: CupertinoIcons.flag,
+                            sheetBuilder: (popupContext) {
+                              return CupertinoActionSheet(
+                                title: const Text('Select Country'),
+                                actions: <CupertinoActionSheetAction>[
+                                  CupertinoActionSheetAction(
+                                    onPressed: () {
+                                      Navigator.of(
+                                        popupContext,
+                                      ).pop(_allCountriesToken);
+                                    },
+                                    child: const Text('All Countries'),
+                                  ),
+                                  ...state.supportedCountries.map(
+                                    (countryCode) => CupertinoActionSheetAction(
+                                      onPressed: () {
+                                        Navigator.of(
+                                          popupContext,
+                                        ).pop(countryCode);
+                                      },
+                                      child: Text(countryCode),
+                                    ),
+                                  ),
+                                ],
+                                cancelButton: CupertinoActionSheetAction(
+                                  isDefaultAction: true,
+                                  onPressed: () {
+                                    Navigator.of(popupContext).pop();
+                                  },
+                                  child: const Text('Cancel'),
+                                ),
+                              );
+                            },
+                            onSelected: (selectedValue) {
+                              if (!mounted || selectedValue == null) {
+                                return;
+                              }
+
+                              final countryCode =
+                                  selectedValue == _allCountriesToken
+                                  ? null
+                                  : selectedValue;
+
+                              context.read<StockBloc>().add(
+                                StockCountryChanged(countryCode),
+                              );
+                            },
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   );
                 },
               ),
@@ -266,31 +272,29 @@ class _HomePageState extends State<HomePage> {
                   if (state.stocks.isEmpty) {
                     return Center(
                       child: Container(
-                        padding: EdgeInsets.symmetric(
+                        padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 16,
                         ),
                         child: Column(
                           spacing: 32,
-                          children: [
-                            Icon(
+                          children: <Widget>[
+                            const Icon(
                               CupertinoIcons.search,
                               size: 54,
                               color: CupertinoColors.systemGrey,
                             ),
-                            Text(
+                            const Text(
                               'No stocks found for selected filters.',
-                              style: TextStyle().copyWith(
+                              style: TextStyle(
                                 color: CupertinoColors.systemGrey,
                               ),
                             ),
                             CupertinoButton(
                               color: CupertinoColors.systemGrey5,
-                              child: Text(
+                              child: const Text(
                                 'Suggest Adding',
-                                style: const TextStyle().copyWith(
-                                  color: CupertinoColors.black,
-                                ),
+                                style: TextStyle(color: CupertinoColors.black),
                               ),
                               onPressed: () {},
                             ),
